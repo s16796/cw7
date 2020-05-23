@@ -1,0 +1,51 @@
+USE [s16796]
+GO
+
+
+/****** Object:  StoredProcedure [dbo].[Promote]    Script Date: 5/10/2020 12:44:09 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+
+
+ALTER PROCEDURE [dbo].[Promote] @Studies NVARCHAR(50), @Semester INT
+AS
+DECLARE @IdStudy INT;
+DECLARE @IdEnrollment INT;
+DECLARE @IdNewEnrollment INT;
+BEGIN
+	SELECT @IdStudy = IdStudy FROM Studies WHERE Studies.Name = @Studies;
+	IF @IdStudy IS NULL
+		BEGIN
+			RAISERROR ('No match for given studies', 1, 1);
+			RETURN;
+		END;
+	ELSE
+		BEGIN
+		SELECT @IdEnrollment = IdEnrollment FROM Enrollment WHERE Enrollment.IdStudy = @IdStudy AND Enrollment.Semester = @Semester;
+		IF @IdEnrollment IS NULL
+			BEGIN
+				RAISERROR ('Matching enrollment does not exist', 1, 1);
+				RETURN;
+			END;
+		ELSE
+			BEGIN
+			SELECT @IdNewEnrollment = IdEnrollment FROM Enrollment WHERE Enrollment.IdStudy = @IdStudy AND Enrollment.Semester = (@Semester + 1);
+			IF @IdNewEnrollment IS NULL
+				BEGIN
+					SELECT @IDNewEnrollment = (MAX(IdEnrollment)+1) FROM Enrollment;
+					INSERT INTO Enrollment(IdEnrollment, Semester, IdStudy, StartDate)
+					VALUES(@IdNewEnrollment, @Semester + 1, @IdStudy, GETDATE());
+				END;
+			UPDATE Student SET Student.IdEnrollment = @IdNewEnrollment WHERE Student.IdEnrollment = @IdEnrollment;
+			SELECT * FROM Enrollment WHERE Enrollment.IdEnrollment = @IdNewEnrollment;
+			END;
+		END;
+END;
+GO
+
+
